@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">    
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>Real time Todo List - MongoDB, NodeJs, Pusher</title>
+    <style>
+        #loading {
+            display: none;
+            text-align: center;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            /*display: none;*/
+        }
+                        
+        ::-webkit-scrollbar-track-piece
+        {
+            background-color:transparent;
+        }
+        /* Handle */
+        ::-webkit-scrollbar-thumb {
+            background:#454B69;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background:#3E435E; 
+        }
+
+    </style>
+  </head>
+  <body>
+    <br><br>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3"></div>
+            <div class="col-md-6">
+                <h4>Todo List</h4>
+                <h6>MongoDB CRUD, NodeJs, Pusher</h6>
+                <br>
+                <form class="form-inline" id="form">                                                              
+                    <input type="text" class="form-control" style="width: 100%;" id="item" name="item" placeholder="Add todo here...">                    
+                </form>
+                <br>
+                <div style="overflow-y: scroll;max-height:65vh;border-radius:5px;">
+                    <div id="loading">
+                        <img src="https://media3.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif" style="margin-left:50%;transform: translateX(-50%)"> 
+                        <center>Loading...   </center>
+                    </div>
+                    <ul class="list-group" id="render">                        
+                        <!--<li class="list-group-item">Cras justo odio</li>
+                        <li class="list-group-item">Dapibus ac facilisis in</li>
+                        <li class="list-group-item">Morbi leo risus</li>
+                        <li class="list-group-item">Porta ac consectetur ac</li>
+                        <li class="list-group-item">Vestibulum at eros</li>-->
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-3"></div>
+        </div>
+    </div>
+    <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">            
+            <div class="modal-body">
+                    Edit todo<br><br>
+                    <form class="form-inline" id="form_edit">                                                              
+                        <input type="text" class="form-control" style="width: 100%;" class="edit_item" name="edit_item" >                    
+                    </form>                    
+                    <div style="font-size:10px;margin-top:10px;">Press enter</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="theBtn" data-dismiss="modal">Cancel</button>                
+            </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://js.pusher.com/4.4/pusher.min.js"></script>
+    <script>
+
+        Pusher.logToConsole = false;
+
+        var pusher = new Pusher('e03bcce96ecaed8f4f2c', {
+            cluster: 'ap2',
+            forceTLS: true
+        });
+        
+        $(document).ready(function(){
+            const render = $("#render");
+            const form = $("#form");
+            const item_input= $("#item");
+            const loading= $("#loading");
+            var toEditID;
+
+            function resetForm(){
+                item_input.val('');
+            }
+            function buildItem(todo){
+                return `<li class="list-group-item" id="list_${todo._id}">
+                            <div class="row">
+                                <div class="col-md-8">${todo.item}</div>                                
+                                <div class="col-md-4 text-right">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="editTodo('${todo._id}')" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i> Edit</button>
+                                    <button type="button" class="btn btn-danger btn-sm"  onclick="removeTodo('${todo._id}')"><i class="fa fa-trash"></i> Delete</button>
+                                </div>
+                            </div>                                                        
+                        </li>`;
+            }
+            function buildtodos(todo_array){                
+                todo_array.forEach((todo)=>{                    
+                    render.append(buildItem(todo));
+                });
+            }   
+            
+            function getTodos(){
+                //render.html('');
+                loading.css('display','inline');
+                fetch('/getTodos',{method:'get'}).then((res)=>{
+                    return res.json();
+                }).then((data)=>{
+                    loading.css('display','none');
+                    buildtodos(data);
+                });
+            }         
+            getTodos();
+
+            form.submit((e)=>{
+                e.preventDefault();
+                fetch('/',{
+                    method:'post',
+                    body:JSON.stringify({"item":item_input.val()}),
+                    headers : {
+                        "Content-Type":"application/json"
+                    }     
+
+                }).then((res)=>{
+                    return res.json();
+                    
+                }).then((data)=>{
+                    if(data.result.n==1&data.result.ok==1){
+                        var todo=data.document;
+                        //buildItem(data,giveID(data));
+                        //render.append(buildItem(todo));                        
+                    }
+                    
+                });
+            });
+
+
+            $('#form_edit').submit((e)=>{
+                e.preventDefault();
+                var x = $('#form_edit input').val().toString().trim();  
+                if(x!=''){
+                    fetch('/'+$('#form_edit input').attr('id'),{
+                        method:'put',
+                        body:JSON.stringify({"item":x}),
+                        headers : {
+                            "Content-Type":"application/json"
+                        }     
+
+                    }).then((res)=>{
+                        return res.json();
+                        
+                    }).then((data)=>{
+                        if(data.ok==1){
+                            /*var updated_value = data.value.item;
+                            $("#list_"+data.value._id+" .row .col-md-8").html(updated_value);
+                                            */
+                            $("#theBtn").click();   
+                        }
+                        
+                    });
+                } 
+                
+            });
+
+            //Send changes everywhere---        
+
+            var channel = pusher.subscribe('changes');
+
+
+            channel.bind('insert', function(data) {
+                var todo = data.fullDocument;
+                render.append(buildItem(todo));
+                resetForm();
+            });
+            channel.bind('delete', function(data) {
+                $('#list_'+data.documentKey._id).remove();                
+            });
+            channel.bind('update', function(data) {                
+                var updated_value = data.fullDocument.item;
+                $("#list_"+data.fullDocument._id+" .row .col-md-8").html(updated_value);                
+            });
+            
+            
+            
+        });
+
+        function removeTodo(id){
+            fetch('/'+id,{method:'delete'}).then((res)=>{
+                return res.json();
+            }).then((data)=>{                    
+                if(data.ok==1){
+                    //$('#list_'+id).remove();
+                }
+            });
+        }
+        
+
+        function editTodo(id){
+            
+            $('#form_edit input').val($('#list_'+id+" .row .col-md-8").html().toString());
+            $('#form_edit input').attr('id', id);
+        };
+        
+
+    </script>    
+  </body>
+</html>
