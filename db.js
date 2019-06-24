@@ -1,7 +1,7 @@
 const MongoClient = require("mongodb").MongoClient;
 const ObjectID = require("mongodb").ObjectID;
 const dbname = "crud_mongodb";
-const url = "mongodb+srv://niks:niks@cluster0-fif98.mongodb.net/test?retryWrites=true&w=majority";
+const url = <your-mongodb-connection-db-url>;
 const mongoOptions = {useNewUrlParser:true};
 
 const state = {
