@@ -1,4 +1,4 @@
-# MongoDB-RealTime-Todo-App (REST API)
+# (REST API) MongoDB-RealTime-Todo-App 
 A real time todo list app using MongoDB CRUD, Nodejs and Pusher
 
 Live demo : https://guarded-spire-38614.herokuapp.com/
